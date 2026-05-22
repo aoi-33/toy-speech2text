@@ -1,0 +1,553 @@
+/* =============================================
+   CSS カスタムプロパティ（デザイントークン）
+   ============================================= */
+:root {
+  --primary:        #4f46e5;
+  --primary-hover:  #4338ca;
+  --primary-light:  #eef2ff;
+  --danger:         #dc2626;
+  --danger-hover:   #b91c1c;
+  --danger-light:   #fef2f2;
+  --bg:             #f8fafc;
+  --surface:        #ffffff;
+  --surface-raised: #f1f5f9;
+  --text:           #1e293b;
+  --text-muted:     #64748b;
+  --text-subtle:    #94a3b8;
+  --border:         #e2e8f0;
+  --border-focus:   #a5b4fc;
+  --radius-sm:      6px;
+  --radius:         10px;
+  --radius-lg:      14px;
+  --shadow-sm:      0 1px 3px rgba(0,0,0,.08);
+  --shadow:         0 4px 16px rgba(0,0,0,.10);
+  --transition:     0.18s ease;
+}
+
+/* =============================================
+   リセット・ベース
+   ============================================= */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--bg);
+  min-height: 100vh;
+}
+
+/* =============================================
+   レイアウト
+   ============================================= */
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+/* =============================================
+   ヘッダー
+   ============================================= */
+header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+header h1 {
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.subtitle {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/* =============================================
+   タブ
+   ============================================= */
+.tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--surface-raised);
+  border-radius: var(--radius);
+  padding: 4px;
+  margin-bottom: 20px;
+}
+
+.tab {
+  flex: 1;
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+
+.tab:hover {
+  color: var(--text);
+  background: rgba(0,0,0,.04);
+}
+
+.tab.active {
+  background: var(--surface);
+  color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* =============================================
+   パネル
+   ============================================= */
+.panel {
+  display: none;
+}
+
+.panel.active {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+/* =============================================
+   エンジンセレクター
+   ============================================= */
+.engine-selector {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.engine-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition),
+    background var(--transition);
+  text-align: left;
+}
+
+.engine-btn:hover {
+  border-color: var(--primary-light);
+  background: var(--primary-light);
+}
+
+.engine-btn.active {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  box-shadow: 0 0 0 3px rgba(79,70,229,.12);
+}
+
+.engine-name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text);
+  display: block;
+}
+
+.engine-badge {
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 99px;
+  display: inline-block;
+  margin-top: 2px;
+}
+
+/* 各バッジ色 */
+.badge-chrome {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.badge-safari {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.badge-error {
+  background: var(--danger-light);
+  color: var(--danger);
+}
+
+/* =============================================
+   エンジン固有コントロール領域
+   ============================================= */
+#webspeech-ctrl,
+#whisper-mic-ctrl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+/* モデル選択行 */
+.row-model {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.row-model select {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.88rem;
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--transition);
+}
+
+.row-model select:focus {
+  border-color: var(--primary);
+}
+
+.badge-device {
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 99px;
+  background: #f3f4f6;
+  color: #374151;
+}
+
+/* =============================================
+   ボタン
+   ============================================= */
+/* 録音ボタン（大） */
+.btn-record {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 36px;
+  border: none;
+  border-radius: 99px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(79,70,229,.30);
+  transition:
+    background var(--transition),
+    box-shadow var(--transition),
+    transform 0.1s ease;
+}
+
+.btn-record:hover:not(:disabled) {
+  background: var(--primary-hover);
+  box-shadow: 0 4px 14px rgba(79,70,229,.35);
+}
+
+.btn-record:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.btn-record:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 録音中は赤 */
+.btn-record.recording {
+  background: var(--danger);
+  box-shadow: 0 2px 8px rgba(220,38,38,.30);
+}
+
+.btn-record.recording:hover {
+  background: var(--danger-hover);
+  box-shadow: 0 4px 14px rgba(220,38,38,.35);
+}
+
+/* セカンダリボタン */
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--surface-raised);
+  color: var(--text);
+  border-color: #cbd5e1;
+}
+
+.btn-secondary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* 小さいボタン */
+.btn-sm {
+  padding: 4px 12px;
+  font-size: 0.82rem;
+  border-radius: var(--radius-sm);
+}
+
+/* =============================================
+   中間テキスト（リアルタイム表示）
+   ============================================= */
+.interim {
+  min-height: 1.4em;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+}
+
+/* =============================================
+   ファイルドロップゾーン
+   ============================================= */
+/* ファイル input は非表示 */
+input[type="file"] {
+  display: none;
+}
+
+.drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px 24px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+  text-align: center;
+}
+
+.drop-zone:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+/* ドラッグオーバー中 */
+.drop-zone.over {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  box-shadow: 0 0 0 4px rgba(79,70,229,.10);
+}
+
+.drop-hint-sub {
+  font-size: 0.82rem;
+  color: var(--text-subtle);
+}
+
+.file-name {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--primary);
+  word-break: break-all;
+}
+
+/* =============================================
+   ステータスバー
+   ============================================= */
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+  min-height: 44px;
+  transition: background var(--transition);
+}
+
+.status-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+#status-text {
+  flex: 1;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+/* 状態ごとの背景色 */
+.status-bar.status-recording {
+  background: var(--danger-light);
+  border-color: #fca5a5;
+}
+
+.status-bar.status-loading {
+  background: #fffbeb;
+  border-color: #fcd34d;
+}
+
+.status-bar.status-done {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.status-bar.status-error {
+  background: var(--danger-light);
+  border-color: #fca5a5;
+}
+
+/* プログレスバー */
+.progress-bar {
+  flex-shrink: 0;
+  width: 100px;
+  height: 6px;
+  background: var(--border);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+/* hidden 属性で非表示 */
+.progress-bar[hidden] {
+  display: none;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--primary);
+  border-radius: 99px;
+  transition: width 0.3s ease;
+}
+
+/* =============================================
+   結果エリア
+   ============================================= */
+.result-area {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-raised);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.result {
+  padding: 16px;
+  min-height: 120px;
+  max-height: 360px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.95rem;
+  line-height: 1.75;
+  color: var(--text);
+}
+
+/* 空のときはプレースホルダーを表示 */
+.result:empty::before {
+  content: "文字起こし結果がここに表示されます";
+  color: var(--text-subtle);
+  font-style: italic;
+}
+
+/* 注意書き・ヒント */
+.notice {
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  background: #fffbeb;
+}
+
+.hint {
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  font-size: 0.82rem;
+  color: var(--text-subtle);
+}
+
+/* =============================================
+   アニメーション
+   ============================================= */
+/* 録音中パルス（ステータスアイコン） */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.status-recording .status-icon {
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+/* =============================================
+   レスポンシブ（480px 以下）
+   ============================================= */
+@media (max-width: 480px) {
+  header h1 {
+    font-size: 1.5rem;
+  }
+
+  /* エンジンセレクターを縦並びに */
+  .engine-selector {
+    flex-direction: column;
+  }
+
+  .engine-btn {
+    width: 100%;
+  }
+
+  .btn-record {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .result {
+    max-height: 240px;
+  }
+}

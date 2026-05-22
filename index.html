@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>音声文字起こしデモ | Web Speech API & Whisper.js</title>
+
+    <!-- ファビコン（絵文字） -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎤</text></svg>">
+
+    <!-- SEO -->
+    <meta name="description" content="Web Speech API（Chrome・Safari）と Whisper.js（ローカルAI）をブラウザで試せる音声文字起こしデモ。マイクのリアルタイム認識と、音声・動画ファイルの文字起こしに対応。インストール不要・無料。">
+    <meta name="keywords" content="音声文字起こし, 文字起こし, Web Speech API, Whisper, 音声認識, ブラウザ, ローカルAI, WebGPU, 無料">
+    <meta name="robots" content="index, follow">
+
+    <!-- OGP（SNS シェア用） -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="音声文字起こしデモ | Web Speech API & Whisper.js">
+    <meta property="og:description" content="ブラウザだけで動く音声文字起こしデモ。Chrome・Safari のネイティブ音声認識と、Whisper.js によるローカルAI処理を比較できます。">
+    <meta property="og:locale" content="ja_JP">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="音声文字起こしデモ | Web Speech API & Whisper.js">
+    <meta name="twitter:description" content="ブラウザだけで動く音声文字起こしデモ。Chrome・Safari のネイティブ音声認識と Whisper.js ローカルAI処理を比較。">
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <!-- ヘッダー -->
+      <header>
+        <h1>音声文字起こしデモ</h1>
+        <p class="subtitle">Web Speech API と Whisper.js（ローカルAI）の比較</p>
+      </header>
+
+      <!-- タブ切り替え -->
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-tab="mic">🎤 マイク（リアルタイム）</button>
+        <button class="tab" data-tab="file">📁 ファイル</button>
+      </div>
+
+      <!-- マイクパネル -->
+      <section id="mic-panel" class="panel active">
+        <!-- エンジン選択 -->
+        <div class="engine-selector" role="group">
+          <button class="engine-btn active" data-engine="webspeech">
+            <span class="engine-name">Web Speech API</span>
+            <span class="engine-badge" id="webspeech-badge">検出中…</span>
+          </button>
+          <button class="engine-btn" data-engine="whisper">
+            <span class="engine-name">Whisper.js</span>
+            <span class="engine-badge" id="whisper-badge">ローカル</span>
+          </button>
+        </div>
+
+        <!-- Web Speech API コントロール -->
+        <div id="webspeech-ctrl">
+          <button class="btn-record" id="webspeech-btn">🎤 録音開始</button>
+          <div class="interim" id="interim"></div>
+        </div>
+
+        <!-- Whisper.js マイクコントロール -->
+        <div id="whisper-mic-ctrl" hidden>
+          <div class="row-model">
+            <label for="mic-model">モデル</label>
+            <select id="mic-model">
+              <option value="Xenova/whisper-tiny">tiny（高速）</option>
+              <option value="Xenova/whisper-small" selected>small（標準）</option>
+              <option value="Xenova/whisper-medium">medium（高精度）</option>
+            </select>
+            <span class="badge-device" id="device-badge"></span>
+          </div>
+          <button class="btn-record" id="whisper-mic-btn">🎤 録音開始</button>
+          <p class="hint">5秒ごとに自動で処理します</p>
+        </div>
+      </section>
+
+      <!-- ファイルパネル -->
+      <section id="file-panel" class="panel" hidden>
+        <p class="notice">📌 ファイル入力は Whisper.js（ローカル処理）のみ対応</p>
+
+        <div class="row-model">
+          <label for="file-model">モデル</label>
+          <select id="file-model">
+            <option value="Xenova/whisper-tiny">tiny（高速）</option>
+            <option value="Xenova/whisper-small" selected>small（標準）</option>
+            <option value="Xenova/whisper-medium">medium（高精度）</option>
+          </select>
+          <span class="badge-device" id="file-device-badge"></span>
+        </div>
+
+        <!-- ドロップゾーン -->
+        <div class="drop-zone" id="drop-zone">
+          <p>🎵 音声・動画ファイルをここにドロップ</p>
+          <p class="drop-hint-sub">mp3 / wav / m4a / mp4 / mov / webm など</p>
+          <input type="file" id="file-input" accept="audio/*,video/*" />
+          <label for="file-input" class="btn-secondary">ファイルを選択</label>
+        </div>
+        <p class="file-name" id="file-name"></p>
+
+        <button class="btn-record" id="file-btn" disabled>文字起こし開始</button>
+      </section>
+
+      <!-- ステータスバー -->
+      <div class="status-bar" role="status" aria-live="polite">
+        <span class="status-icon" id="status-icon">●</span>
+        <span id="status-text">待機中</span>
+        <div class="progress-bar" id="progress-bar" hidden>
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+      </div>
+
+      <!-- 結果エリア -->
+      <div class="result-area">
+        <div class="result-header">
+          <span>文字起こし結果</span>
+          <div>
+            <button class="btn-sm" id="copy-btn">コピー</button>
+            <button class="btn-sm" id="clear-btn">クリア</button>
+          </div>
+        </div>
+        <div id="result" class="result" contenteditable="true" spellcheck="false"></div>
+      </div>
+    </div>
+
+    <!-- エントリーポイント: src/main.js がすべてのインタラクションを管理する -->
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
