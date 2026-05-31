@@ -13,6 +13,7 @@ const el = (id) => document.getElementById(id);
 export function setStatus(text, type) {
   const bar = document.querySelector('.status-bar');
   const label = el('status-text');
+  if (!bar || !label) return;
 
   // 既存の status-* クラスをすべて除去
   [...bar.classList].forEach((cls) => {

@@ -4,7 +4,10 @@
  * DOM には一切触れない。
  */
 
-import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js';
+import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js';
+
+// GitHub Pages などでローカルパスにモデルを探しに行かないようにする
+env.allowLocalModels = false;
 
 // モデルキャッシュ
 let cachedModel = null;
