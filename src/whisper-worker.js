@@ -32,6 +32,8 @@ self.onmessage = async ({ data }) => {
     }
 
     try {
+      // ロード開始を即座に通知（キャッシュ済みの場合 progress イベントが来ないため）
+      self.postMessage({ type: 'progress', phase: 'start' });
       let initFired = false;
       cachedPipeline = await pipeline('automatic-speech-recognition', modelId, {
         device: self.navigator?.gpu ? 'webgpu' : 'wasm',

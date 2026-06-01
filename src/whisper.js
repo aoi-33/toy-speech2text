@@ -18,11 +18,17 @@ const pending = new Map(); // id -> { resolve, reject }
 function getWorker() {
   if (!worker) {
     worker = new Worker(new URL('./whisper-worker.js', import.meta.url), { type: 'module' });
+    worker.onerror = (err) => {
+      const msg = err.message ?? 'Worker の初期化に失敗しました';
+      loadReject?.(new Error(msg));
+      loadResolve = loadReject = loadProgressCb = loadInitCb = null;
+      worker = null; // 次回呼び出しで再生成できるようにリセット
+    };
     worker.onmessage = ({ data }) => {
       switch (data.type) {
         case 'progress':
           if (data.phase === 'download') loadProgressCb?.(data.pct);
-          if (data.phase === 'init') loadInitCb?.();
+          if (data.phase === 'start' || data.phase === 'init') loadInitCb?.();
           break;
         case 'loaded':
           loadResolve?.();
