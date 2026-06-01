@@ -6,6 +6,7 @@
 import { getBrowserInfo, startRecognition, stopRecognition } from './webspeech.js';
 import { getDevice, loadModel, startMicTranscription, stopMicTranscription, transcribeFile } from './whisper.js';
 import { setStatus, setProgress, appendResult, clearResult, setInterim, getResultText } from './ui.js';
+import { isModelCached, deleteModelCache, getApproxSize } from './model-cache.js';
 
 // アプリ状態
 let currentEngine = 'webspeech'; // 'webspeech' | 'whisper'
@@ -13,6 +14,8 @@ let isRecording = false;
 let selectedFile = null;
 
 // DOM 要素
+const micCacheInfo = document.getElementById('mic-cache-info');
+const fileCacheInfo = document.getElementById('file-cache-info');
 const webspeechBtn = document.getElementById('webspeech-btn');
 const whisperMicBtn = document.getElementById('whisper-mic-btn');
 const fileBtn = document.getElementById('file-btn');
@@ -29,6 +32,40 @@ const deviceBadge = document.getElementById('device-badge');
 const fileDeviceBadge = document.getElementById('file-device-badge');
 const webspeechCtrl = document.getElementById('webspeech-ctrl');
 const whisperMicCtrl = document.getElementById('whisper-mic-ctrl');
+
+/**
+ * キャッシュ情報 UI を更新する。
+ * @param {HTMLSelectElement} select - モデル選択 select 要素
+ * @param {HTMLElement} infoEl - 表示先要素
+ */
+async function updateCacheInfo(select, infoEl) {
+  const modelId = select.value;
+  const size = getApproxSize(modelId);
+  const cached = await isModelCached(modelId);
+
+  infoEl.textContent = '';
+
+  const badge = document.createElement('span');
+  badge.className = cached ? 'cache-badge cache-badge--hit' : 'cache-badge cache-badge--miss';
+  badge.textContent = cached ? 'キャッシュ済み' : '未ダウンロード';
+  infoEl.appendChild(badge);
+
+  const sizeSpan = document.createElement('span');
+  sizeSpan.className = 'cache-size';
+  sizeSpan.textContent = size;
+  infoEl.appendChild(sizeSpan);
+
+  if (cached) {
+    const btn = document.createElement('button');
+    btn.className = 'cache-delete-btn';
+    btn.textContent = '削除';
+    btn.addEventListener('click', async () => {
+      await deleteModelCache(modelId);
+      updateCacheInfo(select, infoEl);
+    });
+    infoEl.appendChild(btn);
+  }
+}
 
 /**
  * Web Speech API を使って録音を開始する。
@@ -83,6 +120,7 @@ async function startWhisperMicUI() {
     onText: (text) => appendResult(text),
     onStatus: (text, type) => setStatus(text, type),
   });
+  if (micModelSelect && micCacheInfo) updateCacheInfo(micModelSelect, micCacheInfo);
 }
 
 /**
@@ -121,6 +159,7 @@ async function runFileTranscription() {
   });
   setProgress(null);
   fileBtn.disabled = false;
+  if (fileModelSelect && fileCacheInfo) updateCacheInfo(fileModelSelect, fileCacheInfo);
 }
 
 /**
@@ -176,6 +215,16 @@ function init() {
       switchEngine(btn.dataset.engine);
     });
   });
+
+  // キャッシュ情報の初期表示とモデル切り替え時の更新
+  if (micModelSelect && micCacheInfo) {
+    updateCacheInfo(micModelSelect, micCacheInfo);
+    micModelSelect.addEventListener('change', () => updateCacheInfo(micModelSelect, micCacheInfo));
+  }
+  if (fileModelSelect && fileCacheInfo) {
+    updateCacheInfo(fileModelSelect, fileCacheInfo);
+    fileModelSelect.addEventListener('change', () => updateCacheInfo(fileModelSelect, fileCacheInfo));
+  }
 
   // 各ボタンのイベント
   if (webspeechBtn) webspeechBtn.addEventListener('click', toggleWebSpeech);

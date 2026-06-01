@@ -466,6 +466,58 @@ input[type="file"] {
 }
 
 /* =============================================
+   キャッシュ情報
+   ============================================= */
+
+.cache-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.cache-badge {
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.cache-badge--hit {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.cache-badge--miss {
+  background: var(--surface);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.cache-size {
+  color: var(--text-muted);
+}
+
+.cache-delete-btn {
+  margin-left: auto;
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.cache-delete-btn:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+/* =============================================
    結果エリア
    ============================================= */
 .result-area {
