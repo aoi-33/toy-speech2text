@@ -1,94 +1,59 @@
 /**
  * whisper.js
- * Whisper.js による音声認識処理。
- * 重い ONNX 推論は whisper-worker.js（Web Worker）に委譲する。
+ * Whisper.js（@xenova/transformers）による音声認識処理。
  * DOM には一切触れない。
  */
 
-// --- Worker 管理 ---
+import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js';
 
-let worker = null;
-let loadResolve = null;
-let loadReject = null;
-let loadProgressCb = null;
-let loadInitCb = null;
-let transcribeId = 0;
-const pending = new Map(); // id -> { resolve, reject }
-
-function getWorker() {
-  if (!worker) {
-    worker = new Worker(new URL('./whisper-worker.js', import.meta.url));
-    worker.onerror = (err) => {
-      const msg = err.message ?? 'Worker の初期化に失敗しました';
-      loadReject?.(new Error(msg));
-      loadResolve = loadReject = loadProgressCb = loadInitCb = null;
-      worker = null; // 次回呼び出しで再生成できるようにリセット
-    };
-    worker.onmessage = ({ data }) => {
-      switch (data.type) {
-        case 'progress':
-          if (data.phase === 'download') loadProgressCb?.(data.pct);
-          if (data.phase === 'start' || data.phase === 'init') loadInitCb?.();
-          break;
-        case 'loaded':
-          loadResolve?.();
-          loadResolve = loadReject = loadProgressCb = loadInitCb = null;
-          break;
-        case 'result': {
-          const cb = pending.get(data.id);
-          if (cb) { pending.delete(data.id); cb.resolve(data.text); }
-          break;
-        }
-        case 'error': {
-          if (data.id != null) {
-            const cb = pending.get(data.id);
-            if (cb) { pending.delete(data.id); cb.reject(new Error(data.message)); }
-          } else {
-            loadReject?.(new Error(data.message));
-            loadResolve = loadReject = loadProgressCb = loadInitCb = null;
-          }
-          break;
-        }
-      }
-    };
-  }
-  return worker;
+env.allowLocalModels = false;
+// マルチスレッド WASM は GitHub Pages 非対応（SharedArrayBuffer 未対応）のため無効化
+if (env.backends?.onnx?.wasm) {
+  env.backends.onnx.wasm.numThreads = 1;
 }
 
-// --- マイク録音用の状態 ---
+let cachedModel = null;
+let cachedModelId = null;
 
 let micStream = null;
 let currentRecorder = null;
 let isRecording = false;
 
-// --- 公開 API ---
-
-/**
- * 利用可能なデバイスを返す。
- */
 export function getDevice() {
   return navigator.gpu ? 'webgpu' : 'wasm';
 }
 
 /**
- * Worker にモデルをロードさせる。
- * 既にロード済みなら Worker が即座に loaded を返す。
+ * モデルをロードする。キャッシュ済みなら即返す。
+ * @param {string} modelId
+ * @param {(pct: number) => void} [onProgress]
+ * @param {() => void} [onInit] - ダウンロード完了・ONNX 初期化開始時
  */
 export async function loadModel(modelId, onProgress, onInit) {
-  const w = getWorker();
-  return new Promise((resolve, reject) => {
-    loadResolve = resolve;
-    loadReject = reject;
-    loadProgressCb = onProgress ?? null;
-    loadInitCb = onInit ?? null;
-    w.postMessage({ type: 'load', modelId });
+  if (cachedModelId === modelId && cachedModel !== null) {
+    return cachedModel;
+  }
+
+  const device = getDevice();
+  let initFired = false;
+
+  const model = await pipeline('automatic-speech-recognition', modelId, {
+    device,
+    progress_callback: (p) => {
+      if (p.status === 'progress' && p.total > 0 && p.loaded != null) {
+        if (onProgress) onProgress(Math.round((p.loaded / p.total) * 100));
+      } else if (p.status === 'done' && !initFired) {
+        initFired = true;
+        if (onInit) onInit();
+      }
+    },
   });
+
+  cachedModel = model;
+  cachedModelId = modelId;
+  return model;
 }
 
-/**
- * Blob を 16kHz モノラル Float32Array に変換する（メインスレッド）。
- * AudioContext は Worker では使えないためここで処理する。
- */
 async function decodeBlob(blob) {
   const ab = await blob.arrayBuffer();
   const ctx = new AudioContext({ sampleRate: 16000 });
@@ -98,38 +63,16 @@ async function decodeBlob(blob) {
   return audio;
 }
 
-/**
- * Worker で推論を実行し結果テキストを返す。
- * audio バッファはゼロコピー転送する。
- */
-function inferInWorker(audio, options) {
-  const w = getWorker();
-  const id = ++transcribeId;
-  return new Promise((resolve, reject) => {
-    pending.set(id, { resolve, reject });
-    w.postMessage({ type: 'transcribe', id, audio, options }, [audio.buffer]);
-  });
-}
-
-/**
- * マイクからのリアルタイム文字起こしを開始する。
- * 5秒チャンクを繰り返し処理する。
- */
 export async function startMicTranscription(modelId, callbacks) {
-  const { onText, onStatus } = callbacks;
+  const { onText, onStatus, onProgress, onInit } = callbacks;
 
-  onStatus('モデルを読み込み中…', 'loading');
-  await loadModel(
-    modelId,
-    (pct) => onStatus(`モデル読み込み中… ${pct}%`, 'loading'),
-    () => onStatus('モデルを初期化中… しばらくお待ちください', 'loading'),
-  );
+  const model = await loadModel(modelId, onProgress, onInit);
 
-  onStatus('マイクへのアクセスを要求中…', 'loading');
+  onStatus('マイクへのアクセスを要求中…');
   micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
   isRecording = true;
-  onStatus('録音中…', 'recording');
+  onStatus('録音中…');
 
   const recordChunk = () => {
     if (!isRecording) return;
@@ -150,10 +93,11 @@ export async function startMicTranscription(modelId, callbacks) {
       const blob = new Blob(chunks, { type: recorder.mimeType });
       try {
         const audio = await decodeBlob(blob);
-        const text = await inferInWorker(audio, { language: 'japanese', task: 'transcribe' });
+        const result = await model(audio, { language: 'japanese', task: 'transcribe' });
+        const text = result.text ?? '';
         if (text.trim()) onText(text.trim());
       } catch (err) {
-        onStatus(`エラー: ${err.message}`, 'error');
+        onStatus(`エラー: ${err.message}`);
       }
       if (isRecording) recordChunk();
     };
@@ -167,55 +111,35 @@ export async function startMicTranscription(modelId, callbacks) {
   recordChunk();
 }
 
-/**
- * マイクからの文字起こしを停止する。
- */
 export function stopMicTranscription() {
   isRecording = false;
   if (currentRecorder && currentRecorder.state === 'recording') {
     currentRecorder.stop();
   }
   if (micStream) {
-    micStream.getTracks().forEach((track) => track.stop());
+    micStream.getTracks().forEach((t) => t.stop());
     micStream = null;
   }
   currentRecorder = null;
 }
 
-/**
- * ファイルを文字起こしする。
- * 長い音声は chunk_length_s=30, stride_length_s=5 で分割処理する。
- */
 export async function transcribeFile(file, modelId, callbacks) {
-  const { onText, onStatus, onProgress } = callbacks;
+  const { onText, onStatus, onProgress, onInit } = callbacks;
 
-  onStatus('モデルを読み込み中…', 'loading');
-  await loadModel(
-    modelId,
-    (pct) => {
-      if (onProgress) onProgress(Math.round(pct * 0.5));
-      onStatus(`モデル読み込み中… ${pct}%`, 'loading');
-    },
-    () => {
-      if (onProgress) onProgress('indeterminate');
-      onStatus('モデルを初期化中… しばらくお待ちください', 'loading');
-    },
-  );
+  const model = await loadModel(modelId, onProgress, onInit);
 
-  onStatus('ファイルを解析中…', 'loading');
+  onStatus('ファイルを解析中…');
   const audio = await decodeBlob(file);
 
-  onStatus('文字起こし中…', 'loading');
-  if (onProgress) onProgress(50);
-
-  const text = await inferInWorker(audio, {
+  onStatus('文字起こし中… （ページが一時的に固まります）');
+  const result = await model(audio, {
     language: 'japanese',
     task: 'transcribe',
     chunk_length_s: 30,
     stride_length_s: 5,
   });
 
-  if (onProgress) onProgress(100);
+  const text = result.text ?? '';
   if (text.trim()) onText(text.trim());
-  onStatus('完了', 'done');
+  onStatus('完了');
 }

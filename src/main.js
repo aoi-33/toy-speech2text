@@ -5,7 +5,7 @@
 
 import { getBrowserInfo, startRecognition, stopRecognition } from './webspeech.js';
 import { getDevice, loadModel, startMicTranscription, stopMicTranscription, transcribeFile } from './whisper.js';
-import { setStatus, setProgress, appendResult, clearResult, setInterim, getResultText } from './ui.js';
+import { setStatus, setProgress, appendResult, clearResult, setInterim, getResultText, showOverlay, hideOverlay } from './ui.js';
 import { isModelCached, deleteModelCache, getApproxSize } from './model-cache.js';
 
 // アプリ状態
@@ -116,12 +116,20 @@ async function startWhisperMicUI() {
   isRecording = true;
   whisperMicBtn.textContent = '⏹ 停止';
   whisperMicBtn.classList.add('recording');
+  showOverlay('モデルを準備中…', '', null);
   try {
     await startMicTranscription(modelId, {
       onText: (text) => appendResult(text),
-      onStatus: (text, type) => setStatus(text, type),
+      onStatus: (msg) => {
+        if (msg === '録音中…') { hideOverlay(); setStatus(msg, 'recording'); }
+        else if (msg.startsWith('エラー')) { hideOverlay(); setStatus(msg, 'error'); }
+        else showOverlay(msg, '', null);
+      },
+      onProgress: (pct) => showOverlay(`モデルをダウンロード中… ${pct}%`, getApproxSize(modelId), pct),
+      onInit: () => showOverlay('モデルを初期化中…', '初回のみ30秒ほどかかります', null),
     });
   } catch (err) {
+    hideOverlay();
     setStatus(`エラー: ${err.message}`, 'error');
     isRecording = false;
     whisperMicBtn.textContent = '🎤 録音開始';
@@ -159,15 +167,22 @@ async function runFileTranscription() {
   if (!selectedFile) return;
   fileBtn.disabled = true;
   const modelId = fileModelSelect.value;
+  showOverlay('モデルを準備中…', '', null);
   try {
     await transcribeFile(selectedFile, modelId, {
       onText: (text) => appendResult(text),
-      onStatus: (text, type) => setStatus(text, type),
-      onProgress: (pct) => setProgress(pct),
+      onStatus: (msg) => {
+        if (msg === '完了') { hideOverlay(); setStatus(msg, 'done'); }
+        else if (msg.startsWith('エラー')) { hideOverlay(); setStatus(msg, 'error'); }
+        else if (msg.includes('文字起こし中')) showOverlay('文字起こし中…', 'ページが一時的に固まることがあります', null);
+        else showOverlay(msg, '', null);
+      },
+      onProgress: (pct) => showOverlay(`モデルをダウンロード中… ${pct}%`, getApproxSize(modelId), pct),
+      onInit: () => showOverlay('モデルを初期化中…', '初回のみ30秒ほどかかります', null),
     });
   } catch (err) {
+    hideOverlay();
     setStatus(`エラー: ${err.message}`, 'error');
-    setProgress(null);
   }
   setProgress(null);
   fileBtn.disabled = false;

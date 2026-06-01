@@ -27,6 +27,18 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
+    <!-- ローディングオーバーレイ -->
+    <div id="loading-overlay" class="loading-overlay" hidden>
+      <div class="loading-card">
+        <div class="loading-spinner"></div>
+        <p class="loading-stage" id="loading-stage">処理中…</p>
+        <div class="loading-bar-wrap">
+          <div class="loading-bar-fill" id="loading-bar-fill" style="width:0%"></div>
+        </div>
+        <p class="loading-note" id="loading-note"></p>
+      </div>
+    </div>
+
     <div class="container">
       <!-- ヘッダー -->
       <header>

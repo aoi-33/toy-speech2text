@@ -1,4 +1,4 @@
-// DOM 操作・ステータス・結果表示の一元管理。
+// DOM 操作・ステータス・結果表示・ローディングオーバーレイの一元管理。
 
 // --- DOM 要素の取得（初回アクセス時にキャッシュ） ---
 
@@ -76,6 +76,36 @@ export function clearResult() {
  */
 export function setInterim(text) {
   el('interim').textContent = text;
+}
+
+/**
+ * ローディングオーバーレイを表示・更新する。
+ * @param {string} stage - 太字で表示するメッセージ
+ * @param {string} [note] - 補足メッセージ
+ * @param {number|null} [pct] - 0-100 で確定進捗、null で不定アニメーション
+ */
+export function showOverlay(stage, note = '', pct = null) {
+  const overlay = document.getElementById('loading-overlay');
+  const stageEl = document.getElementById('loading-stage');
+  const noteEl = document.getElementById('loading-note');
+  const fill = document.getElementById('loading-bar-fill');
+  if (!overlay) return;
+  stageEl.textContent = stage;
+  noteEl.textContent = note;
+  if (pct !== null) {
+    fill.style.width = `${pct}%`;
+    fill.classList.remove('indeterminate');
+  } else {
+    fill.style.width = '';
+    fill.classList.add('indeterminate');
+  }
+  overlay.hidden = false;
+}
+
+/** ローディングオーバーレイを非表示にする。 */
+export function hideOverlay() {
+  const overlay = document.getElementById('loading-overlay');
+  if (overlay) overlay.hidden = true;
 }
 
 /**
