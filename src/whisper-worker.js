@@ -29,7 +29,11 @@ self.onmessage = async ({ data }) => {
     try {
       self.postMessage({ type: 'progress', phase: 'start' });
 
-      const { pipeline } = await loadTransformers();
+      const { pipeline, env } = await loadTransformers();
+      // GitHub Pages は COOP/COEP ヘッダーがないため SharedArrayBuffer 非対応。
+      // Worker 内で Atomics.wait を使ったマルチスレッドを試みるとデッドロックするため
+      // シングルスレッドに固定する。
+      env.backends.onnx.wasm.numThreads = 1;
       let initFired = false;
 
       cachedPipeline = await pipeline('automatic-speech-recognition', modelId, {
