@@ -132,6 +132,8 @@ export async function transcribeFile(file, modelId, callbacks) {
   const audio = await decodeBlob(file);
 
   onStatus('文字起こし中… （ページが一時的に固まります）');
+  // DOM 更新をブラウザに描画させてから重い WASM 処理へ入る
+  await new Promise((r) => requestAnimationFrame(r));
   const result = await model(audio, {
     language: 'japanese',
     task: 'transcribe',
