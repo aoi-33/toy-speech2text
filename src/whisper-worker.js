@@ -1,24 +1,19 @@
 /**
- * whisper-worker.js
- * Web Worker として動作し、重い ONNX 推論をメインスレッドから分離する。
- *
- * メインスレッド → Worker のメッセージ:
- *   { type: 'load', modelId }            モデルをロード（キャッシュ済みなら即完了）
- *   { type: 'transcribe', id, audio, options }  推論実行
- *
- * Worker → メインスレッドのメッセージ:
- *   { type: 'progress', phase: 'download'|'init', pct? }
- *   { type: 'loaded' }
- *   { type: 'result', id, text }
- *   { type: 'error', message, id? }
+ * whisper-worker.js  (classic worker)
+ * 静的 import の代わりに動的 import() を使用。
+ * module Worker の読み込み失敗を回避するため type:module を使わない。
  */
-
-import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js';
-
-env.allowLocalModels = false;
 
 let cachedPipeline = null;
 let cachedModelId = null;
+let transformersModule = null;
+
+async function loadTransformers() {
+  if (transformersModule) return transformersModule;
+  transformersModule = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js');
+  transformersModule.env.allowLocalModels = false;
+  return transformersModule;
+}
 
 self.onmessage = async ({ data }) => {
   const { type } = data;
@@ -32,9 +27,11 @@ self.onmessage = async ({ data }) => {
     }
 
     try {
-      // ロード開始を即座に通知（キャッシュ済みの場合 progress イベントが来ないため）
       self.postMessage({ type: 'progress', phase: 'start' });
+
+      const { pipeline } = await loadTransformers();
       let initFired = false;
+
       cachedPipeline = await pipeline('automatic-speech-recognition', modelId, {
         device: self.navigator?.gpu ? 'webgpu' : 'wasm',
         progress_callback: (p) => {
@@ -50,6 +47,7 @@ self.onmessage = async ({ data }) => {
           }
         },
       });
+
       cachedModelId = modelId;
       self.postMessage({ type: 'loaded' });
     } catch (err) {

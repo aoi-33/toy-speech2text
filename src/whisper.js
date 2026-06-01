@@ -17,7 +17,7 @@ const pending = new Map(); // id -> { resolve, reject }
 
 function getWorker() {
   if (!worker) {
-    worker = new Worker(new URL('./whisper-worker.js', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./whisper-worker.js', import.meta.url));
     worker.onerror = (err) => {
       const msg = err.message ?? 'Worker の初期化に失敗しました';
       loadReject?.(new Error(msg));

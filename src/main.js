@@ -116,10 +116,17 @@ async function startWhisperMicUI() {
   isRecording = true;
   whisperMicBtn.textContent = '⏹ 停止';
   whisperMicBtn.classList.add('recording');
-  await startMicTranscription(modelId, {
-    onText: (text) => appendResult(text),
-    onStatus: (text, type) => setStatus(text, type),
-  });
+  try {
+    await startMicTranscription(modelId, {
+      onText: (text) => appendResult(text),
+      onStatus: (text, type) => setStatus(text, type),
+    });
+  } catch (err) {
+    setStatus(`エラー: ${err.message}`, 'error');
+    isRecording = false;
+    whisperMicBtn.textContent = '🎤 録音開始';
+    whisperMicBtn.classList.remove('recording');
+  }
   if (micModelSelect && micCacheInfo) updateCacheInfo(micModelSelect, micCacheInfo);
 }
 
@@ -152,11 +159,16 @@ async function runFileTranscription() {
   if (!selectedFile) return;
   fileBtn.disabled = true;
   const modelId = fileModelSelect.value;
-  await transcribeFile(selectedFile, modelId, {
-    onText: (text) => appendResult(text),
-    onStatus: (text, type) => setStatus(text, type),
-    onProgress: (pct) => setProgress(pct),
-  });
+  try {
+    await transcribeFile(selectedFile, modelId, {
+      onText: (text) => appendResult(text),
+      onStatus: (text, type) => setStatus(text, type),
+      onProgress: (pct) => setProgress(pct),
+    });
+  } catch (err) {
+    setStatus(`エラー: ${err.message}`, 'error');
+    setProgress(null);
+  }
   setProgress(null);
   fileBtn.disabled = false;
   if (fileModelSelect && fileCacheInfo) updateCacheInfo(fileModelSelect, fileCacheInfo);
