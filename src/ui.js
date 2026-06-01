@@ -34,11 +34,18 @@ export function setProgress(pct) {
 
   if (pct === null) {
     bar.hidden = true;
+    fill.classList.remove('indeterminate');
     return;
   }
 
   bar.hidden = false;
-  fill.style.width = `${Math.min(100, Math.max(0, pct))}%`;
+  if (pct === 'indeterminate') {
+    fill.classList.add('indeterminate');
+    fill.style.width = '';
+  } else {
+    fill.classList.remove('indeterminate');
+    fill.style.width = `${Math.min(100, Math.max(0, pct))}%`;
+  }
 }
 
 /**

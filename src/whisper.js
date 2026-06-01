@@ -34,19 +34,24 @@ export function getDevice() {
  * @param {(pct: number) => void} [onProgress] - 進捗コールバック（0-100）
  * @returns {Promise<any>} ロードされたパイプライン
  */
-export async function loadModel(modelId, onProgress) {
+export async function loadModel(modelId, onProgress, onInit) {
   if (cachedModelId === modelId && cachedModel !== null) {
     return cachedModel;
   }
 
   const device = getDevice();
+  let initFired = false;
 
   const model = await pipeline('automatic-speech-recognition', modelId, {
     device,
     progress_callback: (progress) => {
-      if (onProgress && progress.total > 0 && progress.loaded != null) {
+      if (progress.status === 'progress' && progress.total > 0 && progress.loaded != null) {
         const pct = Math.round((progress.loaded / progress.total) * 100);
-        onProgress(pct);
+        if (onProgress) onProgress(pct);
+      } else if (progress.status === 'done' && !initFired) {
+        // ファイルのダウンロード完了 → ONNX 初期化フェーズへ
+        initFired = true;
+        if (onInit) onInit();
       }
     },
   });
@@ -82,9 +87,11 @@ export async function startMicTranscription(modelId, callbacks) {
   const { onText, onStatus } = callbacks;
 
   onStatus('モデルを読み込み中…', 'loading');
-  const model = await loadModel(modelId, (pct) => {
-    onStatus(`モデル読み込み中… ${pct}%`, 'loading');
-  });
+  const model = await loadModel(
+    modelId,
+    (pct) => onStatus(`モデル読み込み中… ${pct}%`, 'loading'),
+    () => onStatus('モデルを初期化中… しばらくお待ちください', 'loading'),
+  );
 
   onStatus('マイクへのアクセスを要求中…', 'loading');
   micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -157,10 +164,17 @@ export async function transcribeFile(file, modelId, callbacks) {
   const { onText, onStatus, onProgress } = callbacks;
 
   onStatus('モデルを読み込み中…', 'loading');
-  const model = await loadModel(modelId, (pct) => {
-    if (onProgress) onProgress(Math.round(pct * 0.5)); // ロードは 0-50% に割り当て
-    onStatus(`モデル読み込み中… ${pct}%`, 'loading');
-  });
+  const model = await loadModel(
+    modelId,
+    (pct) => {
+      if (onProgress) onProgress(Math.round(pct * 0.5));
+      onStatus(`モデル読み込み中… ${pct}%`, 'loading');
+    },
+    () => {
+      if (onProgress) onProgress('indeterminate');
+      onStatus('モデルを初期化中… しばらくお待ちください', 'loading');
+    },
+  );
 
   onStatus('ファイルを解析中…', 'loading');
 
